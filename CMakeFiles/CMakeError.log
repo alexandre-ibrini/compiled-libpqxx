@@ -1,0 +1,52 @@
+Performing C++ SOURCE FILE Test PQXX_HAVE_OPTIONAL failed with the following output:
+Change Dir: /home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_2d1d8/fast"
+/usr/bin/make -f CMakeFiles/cmTC_2d1d8.dir/build.make CMakeFiles/cmTC_2d1d8.dir/build
+make[1]: Entering directory '/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_2d1d8.dir/src.cxx.o
+/usr/bin/c++    -DPQXX_HAVE_OPTIONAL   -std=c++11 -o CMakeFiles/cmTC_2d1d8.dir/src.cxx.o -c /home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx
+/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx: In function ‘int main()’:
+/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx:3:21: error: ‘optional’ is not a member of ‘std’
+   int main() { std::optional<int> o; }
+                     ^~~~~~~~
+/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx:3:30: error: expected primary-expression before ‘int’
+   int main() { std::optional<int> o; }
+                              ^~~
+CMakeFiles/cmTC_2d1d8.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_2d1d8.dir/src.cxx.o' failed
+make[1]: *** [CMakeFiles/cmTC_2d1d8.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_2d1d8/fast' failed
+make: *** [cmTC_2d1d8/fast] Error 2
+
+Source file was:
+
+  #include <optional>
+  int main() { std::optional<int> o; }
+
+Performing C++ SOURCE FILE Test PQXX_HAVE_EXP_OPTIONAL failed with the following output:
+Change Dir: /home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_8290b/fast"
+/usr/bin/make -f CMakeFiles/cmTC_8290b.dir/build.make CMakeFiles/cmTC_8290b.dir/build
+make[1]: Entering directory '/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_8290b.dir/src.cxx.o
+/usr/bin/c++    -DPQXX_HAVE_EXP_OPTIONAL   -std=c++11 -o CMakeFiles/cmTC_8290b.dir/src.cxx.o -c /home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx
+/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx: In function ‘int main()’:
+/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx:3:21: error: ‘std::experimental’ has not been declared
+   int main() { std::experimental::optional<int> o; }
+                     ^~~~~~~~~~~~
+/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp/src.cxx:3:44: error: expected primary-expression before ‘int’
+   int main() { std::experimental::optional<int> o; }
+                                            ^~~
+CMakeFiles/cmTC_8290b.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_8290b.dir/src.cxx.o' failed
+make[1]: *** [CMakeFiles/cmTC_8290b.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/alex/Documents/STR/IdealWorks/libpqxx-6.4.7/build/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_8290b/fast' failed
+make: *** [cmTC_8290b/fast] Error 2
+
+Source file was:
+
+  #include <experimental/optional>
+  int main() { std::experimental::optional<int> o; }
+
