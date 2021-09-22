@@ -1,32 +1,27 @@
-/* Definitions for the pqxx::result class and support classes.
+/** Definitions for the pqxx::result class and support classes.
  *
  * pqxx::result represents the set of result rows from a database query.
  *
  * DO NOT INCLUDE THIS FILE DIRECTLY; include pqxx/result instead.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_ROW
 #define PQXX_H_ROW
 
 #include "pqxx/compiler-public.hxx"
-#include "pqxx/internal/compiler-internal-pre.hxx"
+#include "pqxx/compiler-internal-pre.hxx"
 
 #include "pqxx/except.hxx"
 #include "pqxx/field.hxx"
 #include "pqxx/result.hxx"
 
-#include "pqxx/internal/concat.hxx"
 
-namespace pqxx::internal
-{
-template<typename... T> class result_iter;
-} // namespace pqxx::internal
-
+// Methods tested in eg. test module test01 are marked with "//[t01]".
 
 namespace pqxx
 {
@@ -54,106 +49,125 @@ public:
   using const_reverse_iterator = const_reverse_row_iterator;
   using reverse_iterator = const_reverse_iterator;
 
-  row() = default;
-  row(row &&) = default;
-  row(row const &) = default;
-  row &operator=(row const &) = default;
-  row &operator=(row &&) = default;
+  row() =default;
+
+  /// @deprecated Do not use this constructor.  It will become private.
+  row(result r, size_t i) noexcept;
+
+  ~row() noexcept =default; // Yes Scott Meyers, you're absolutely right[1]
 
   /**
    * @name Comparison
    */
   //@{
-  [[nodiscard]] PQXX_PURE bool operator==(row const &) const noexcept;
-  [[nodiscard]] bool operator!=(row const &rhs) const noexcept
-  {
-    return not operator==(rhs);
-  }
+  PQXX_PURE bool operator==(const row &) const noexcept;		//[t75]
+  bool operator!=(const row &rhs) const noexcept			//[t75]
+      { return not operator==(rhs); }
   //@}
 
-  [[nodiscard]] const_iterator begin() const noexcept;
-  [[nodiscard]] const_iterator cbegin() const noexcept;
-  [[nodiscard]] const_iterator end() const noexcept;
-  [[nodiscard]] const_iterator cend() const noexcept;
+  const_iterator begin() const noexcept;				//[t82]
+  const_iterator cbegin() const noexcept;
+  const_iterator end() const noexcept;					//[t82]
+  const_iterator cend() const noexcept;
 
   /**
    * @name Field access
    */
   //@{
-  [[nodiscard]] reference front() const noexcept;
-  [[nodiscard]] reference back() const noexcept;
+  reference front() const noexcept;					//[t74]
+  reference back() const noexcept;					//[t75]
 
-  [[nodiscard]] const_reverse_row_iterator rbegin() const;
-  [[nodiscard]] const_reverse_row_iterator crbegin() const;
-  [[nodiscard]] const_reverse_row_iterator rend() const;
-  [[nodiscard]] const_reverse_row_iterator crend() const;
+  const_reverse_row_iterator rbegin() const;				//[t82]
+  const_reverse_row_iterator crbegin() const;
+  const_reverse_row_iterator rend() const;				//[t82]
+  const_reverse_row_iterator crend() const;
 
-  [[nodiscard]] reference operator[](size_type) const noexcept;
+  reference operator[](size_type) const noexcept;			//[t11]
+  reference operator[](int) const noexcept;				//[t02]
   /** Address field by name.
    * @warning This is much slower than indexing by number, or iterating.
    */
-  [[nodiscard]] reference operator[](zview col_name) const;
-
-  reference at(size_type) const;
+  reference operator[](const char[]) const;				//[t11]
   /** Address field by name.
    * @warning This is much slower than indexing by number, or iterating.
    */
-  reference at(zview col_name) const;
+  reference operator[](const std::string &) const;			//[t11]
+  reference at(size_type) const; 					//[t11]
+  reference at(int) const;						//[t11]
+  /** Address field by name.
+   * @warning This is much slower than indexing by number, or iterating.
+   */
+  reference at(const char[]) const;					//[t11]
+  /** Address field by name.
+   * @warning This is much slower than indexing by number, or iterating.
+   */
+  reference at(const std::string &) const;				//[t11]
+  //@}
 
-  [[nodiscard]] size_type size() const noexcept { return m_end - m_begin; }
+  size_type size() const noexcept					//[t11]
+						     { return m_end-m_begin; }
 
-  PQXX_DEPRECATED("Swap iterators, not rows.")
-  void swap(row &) noexcept;
+  void swap(row &) noexcept;						//[t11]
 
   /// Row number, assuming this is a real row and not end()/rend().
-  [[nodiscard]] result::size_type rownumber() const noexcept
-  {
-    return m_index;
-  }
+  size_t rownumber() const noexcept { return size_t(m_index); }		//[t11]
 
   /**
    * @name Column information
    */
   //@{
-  /// Number of given column (throws exception if it doesn't exist).
-  [[nodiscard]] size_type column_number(zview col_name) const;
+  /// Number of given column (throws exception if it doesn't exist)
+  size_type column_number(const std::string &ColName) const		//[t30]
+      { return column_number(ColName.c_str()); }
 
-  /// Return a column's type.
-  [[nodiscard]] oid column_type(size_type) const;
+  /// Number of given column (throws exception if it doesn't exist)
+  size_type column_number(const char[]) const;       			//[t30]
 
-  /// Return a column's type.
-  [[nodiscard]] oid column_type(zview col_name) const
-  {
-    return column_type(column_number(col_name));
-  }
+  /// Type of given column
+  oid column_type(size_type) const;					//[t07]
+
+  /// Type of given column
+  oid column_type(int ColNum) const					//[t07]
+      { return column_type(size_type(ColNum)); }
+
+  /// Type of given column
+  oid column_type(const std::string &ColName) const			//[t07]
+      { return column_type(column_number(ColName)); }
+
+  /// Type of given column
+  oid column_type(const char ColName[]) const				//[t07]
+      { return column_type(column_number(ColName)); }
 
   /// What table did this column come from?
-  [[nodiscard]] oid column_table(size_type col_num) const;
+  oid column_table(size_type ColNum) const;				//[t02]
 
   /// What table did this column come from?
-  [[nodiscard]] oid column_table(zview col_name) const
-  {
-    return column_table(column_number(col_name));
-  }
+  oid column_table(int ColNum) const					//[t02]
+      { return column_table(size_type(ColNum)); }
+  /// What table did this column come from?
+  oid column_table(const std::string &ColName) const			//[t02]
+      { return column_table(column_number(ColName)); }
 
   /// What column number in its table did this result column come from?
   /** A meaningful answer can be given only if the column in question comes
    * directly from a column in a table.  If the column is computed in any
    * other way, a logic_error will be thrown.
    *
-   * @param col_num a zero-based column number in this result set
+   * @param ColNum a zero-based column number in this result set
    * @return a zero-based column number in originating table
    */
-  [[nodiscard]] size_type table_column(size_type) const;
+  size_type table_column(size_type) const;				//[t93]
 
   /// What column number in its table did this result column come from?
-  [[nodiscard]] size_type table_column(zview col_name) const
-  {
-    return table_column(column_number(col_name));
-  }
+  size_type table_column(int ColNum) const				//[t93]
+      { return table_column(size_type(ColNum)); }
+
+  /// What column number in its table did this result column come from?
+  size_type table_column(const std::string &ColName) const		//[t93]
+      { return table_column(column_number(ColName)); }
   //@}
 
-  [[nodiscard]] result::size_type num() const { return rownumber(); }
+  size_t num() const { return rownumber(); }				//[t01]
 
   /** Produce a slice of this row, containing the given range of columns.
    *
@@ -167,85 +181,25 @@ public:
    * not be designed with the possibility of empty rows in mind, be sure to
    * test for that case.
    */
-  [[nodiscard]] row slice(size_type sbegin, size_type send) const;
+  row slice(size_type Begin, size_type End) const;
 
   // Is this an empty slice?
-  [[nodiscard]] PQXX_PURE bool empty() const noexcept;
-
-  /// Extract entire row's values into a tuple.
-  /** Converts to the types of the tuple's respective fields.
-   */
-  template<typename Tuple> void to(Tuple &t) const
-  {
-    check_size(std::tuple_size_v<Tuple>);
-    convert(t);
-  }
-
-  template<typename... TYPE> std::tuple<TYPE...> as() const
-  {
-    check_size(sizeof...(TYPE));
-    using seq = std::make_index_sequence<sizeof...(TYPE)>;
-    return get_tuple<std::tuple<TYPE...>>(seq{});
-  }
+  PQXX_PURE bool empty() const noexcept;
 
 protected:
-  friend class const_row_iterator;
-  friend class result;
-  row(result const &r, result_size_type i) noexcept;
-
-  /// Throw @c usage_error if row size is not @c expected.
-  void check_size(size_type expected) const
-  {
-    if (size() != expected)
-      throw usage_error{internal::concat(
-        "Tried to extract ", expected, " field(s) from a row of ", size(),
-        ".")};
-  }
-
-  template<typename... T> friend class pqxx::internal::result_iter;
-  /// Convert entire row to tuple fields, without checking row size.
-  template<typename Tuple> void convert(Tuple &t) const
-  {
-    constexpr auto tup_size{std::tuple_size_v<Tuple>};
-    extract_fields(t, std::make_index_sequence<tup_size>{});
-  }
-
   friend class field;
   /// Result set of which this is one row.
   result m_result;
   /// Row number.
   /**
-   * You'd expect this to be unsigned, but due to the way reverse iterators
+   * You'd expect this to be a size_t, but due to the way reverse iterators
    * are related to regular iterators, it must be allowed to underflow to -1.
    */
-  result::size_type m_index = 0;
+  long m_index = 0;
   /// First column in slice.  This row ignores lower-numbered columns.
   size_type m_begin = 0;
   /// End column in slice.  This row only sees lower-numbered columns.
   size_type m_end = 0;
-
-private:
-  template<typename Tuple, std::size_t... indexes>
-  void extract_fields(Tuple &t, std::index_sequence<indexes...>) const
-  {
-    (extract_value<Tuple, indexes>(t), ...);
-  }
-
-  template<typename Tuple, std::size_t index>
-  void extract_value(Tuple &t) const;
-
-  /// Convert row's values as a new tuple.
-  template<typename TUPLE, std::size_t... indexes>
-  auto get_tuple(std::index_sequence<indexes...>) const
-  {
-    return std::make_tuple(get_field<TUPLE, indexes>()...);
-  }
-
-  /// Extract and convert a field.
-  template<typename TUPLE, std::size_t index> auto get_field() const
-  {
-    return (*this)[index].as<std::tuple_element_t<index, TUPLE>>();
-  }
 };
 
 
@@ -254,102 +208,69 @@ class PQXX_LIBEXPORT const_row_iterator : public field
 {
 public:
   using iterator_category = std::random_access_iterator_tag;
-  using value_type = field const;
-  using pointer = field const *;
+  using value_type = const field;
+  using pointer = const field *;
   using size_type = row_size_type;
   using difference_type = row_difference_type;
   using reference = field;
 
-#include "pqxx/internal/ignore-deprecated-pre.hxx"
-  const_row_iterator() = default;
-  const_row_iterator(row const &T, row_size_type C) noexcept : field{T, C} {}
-#include "pqxx/internal/ignore-deprecated-post.hxx"
-  const_row_iterator(field const &F) noexcept : field{F} {}
-  const_row_iterator(const_row_iterator const &) = default;
-  const_row_iterator(const_row_iterator &&) = default;
+  const_row_iterator(const row &T, row_size_type C) noexcept :		//[t82]
+    field{T, C} {}
+  const_row_iterator(const field &F) noexcept : field{F} {}		//[t82]
 
   /**
    * @name Dereferencing operators
    */
   //@{
-  [[nodiscard]] pointer operator->() const { return this; }
-  [[nodiscard]] reference operator*() const { return field{*this}; }
+  pointer operator->() const { return this; }				//[t82]
+  reference operator*() const { return field{*this}; }			//[t82]
   //@}
 
   /**
    * @name Manipulations
    */
   //@{
-  const_row_iterator &operator=(const_row_iterator const &) = default;
-  const_row_iterator &operator=(const_row_iterator &&) = default;
+  const_row_iterator operator++(int);					//[t82]
+  const_row_iterator &operator++() { ++m_col; return *this; }		//[t82]
+  const_row_iterator operator--(int);					//[t82]
+  const_row_iterator &operator--() { --m_col; return *this; }		//[t82]
 
-  const_row_iterator operator++(int);
-  const_row_iterator &operator++()
-  {
-    ++m_col;
-    return *this;
-  }
-  const_row_iterator operator--(int);
-  const_row_iterator &operator--()
-  {
-    --m_col;
-    return *this;
-  }
-
-  const_row_iterator &operator+=(difference_type i)
-  {
-    m_col = size_type(difference_type(m_col) + i);
-    return *this;
-  }
-  const_row_iterator &operator-=(difference_type i)
-  {
-    m_col = size_type(difference_type(m_col) - i);
-    return *this;
-  }
+  const_row_iterator &operator+=(difference_type i)			//[t82]
+      { m_col = size_type(difference_type(m_col) + i); return *this; }
+  const_row_iterator &operator-=(difference_type i)			//[t82]
+      { m_col = size_type(difference_type(m_col) - i); return *this; }
   //@}
 
   /**
    * @name Comparisons
    */
   //@{
-  [[nodiscard]] bool operator==(const_row_iterator const &i) const
-  {
-    return col() == i.col();
-  }
-  [[nodiscard]] bool operator!=(const_row_iterator const &i) const
-  {
-    return col() != i.col();
-  }
-  [[nodiscard]] bool operator<(const_row_iterator const &i) const
-  {
-    return col() < i.col();
-  }
-  [[nodiscard]] bool operator<=(const_row_iterator const &i) const
-  {
-    return col() <= i.col();
-  }
-  [[nodiscard]] bool operator>(const_row_iterator const &i) const
-  {
-    return col() > i.col();
-  }
-  [[nodiscard]] bool operator>=(const_row_iterator const &i) const
-  {
-    return col() >= i.col();
-  }
+  bool operator==(const const_row_iterator &i) const			//[t82]
+      {return col()==i.col();}
+  bool operator!=(const const_row_iterator &i) const			//[t82]
+      {return col()!=i.col();}
+  bool operator<(const const_row_iterator &i) const			//[t82]
+      {return col()<i.col();}
+  bool operator<=(const const_row_iterator &i) const			//[t82]
+      {return col()<=i.col();}
+  bool operator>(const const_row_iterator &i) const			//[t82]
+      {return col()>i.col();}
+  bool operator>=(const const_row_iterator &i) const			//[t82]
+      {return col()>=i.col();}
   //@}
 
   /**
    * @name Arithmetic operators
    */
   //@{
-  [[nodiscard]] inline const_row_iterator operator+(difference_type) const;
+  inline const_row_iterator operator+(difference_type) const;		//[t82]
 
-  friend const_row_iterator
-  operator+(difference_type, const_row_iterator const &);
+  friend const_row_iterator operator+(					//[t82]
+	difference_type,
+	const_row_iterator);
 
-  [[nodiscard]] inline const_row_iterator operator-(difference_type) const;
-  [[nodiscard]] inline difference_type
-  operator-(const_row_iterator const &) const;
+  inline const_row_iterator operator-(difference_type) const;		//[t82]
+  inline difference_type operator-(const_row_iterator) const;		//[t82]
   //@}
 };
 
@@ -360,155 +281,123 @@ class PQXX_LIBEXPORT const_reverse_row_iterator : private const_row_iterator
 public:
   using super = const_row_iterator;
   using iterator_type = const_row_iterator;
-  using iterator_type::difference_type;
   using iterator_type::iterator_category;
+  using iterator_type::difference_type;
   using iterator_type::pointer;
   using value_type = iterator_type::value_type;
   using reference = iterator_type::reference;
 
-  const_reverse_row_iterator() = default;
-  const_reverse_row_iterator(const_reverse_row_iterator const &) = default;
-  const_reverse_row_iterator(const_reverse_row_iterator &&) = default;
+  const_reverse_row_iterator(const const_reverse_row_iterator &r) :	//[t82]
+    const_row_iterator{r} {}
+  explicit
+    const_reverse_row_iterator(const super &rhs) noexcept :		//[t82]
+      const_row_iterator{rhs} { super::operator--(); }
 
-  explicit const_reverse_row_iterator(super const &rhs) noexcept :
-          const_row_iterator{rhs}
-  {
-    super::operator--();
-  }
-
-  [[nodiscard]] PQXX_PURE iterator_type base() const noexcept;
+  PQXX_PURE iterator_type base() const noexcept;			//[t82]
 
   /**
    * @name Dereferencing operators
    */
   //@{
-  using iterator_type::operator->;
-  using iterator_type::operator*;
+  using iterator_type::operator->;					//[t82]
+  using iterator_type::operator*;					//[t82]
   //@}
 
   /**
    * @name Manipulations
    */
   //@{
-  const_reverse_row_iterator &operator=(const_reverse_row_iterator const &r)
-  {
-    iterator_type::operator=(r);
-    return *this;
-  }
-  const_reverse_row_iterator operator++()
-  {
-    iterator_type::operator--();
-    return *this;
-  }
-  const_reverse_row_iterator operator++(int);
-  const_reverse_row_iterator &operator--()
-  {
-    iterator_type::operator++();
-    return *this;
-  }
-  const_reverse_row_iterator operator--(int);
-  const_reverse_row_iterator &operator+=(difference_type i)
-  {
-    iterator_type::operator-=(i);
-    return *this;
-  }
-  const_reverse_row_iterator &operator-=(difference_type i)
-  {
-    iterator_type::operator+=(i);
-    return *this;
-  }
+  const_reverse_row_iterator &
+    operator=(const const_reverse_row_iterator &r)			//[t82]
+      { iterator_type::operator=(r); return *this; }
+  const_reverse_row_iterator operator++()				//[t82]
+      { iterator_type::operator--(); return *this; }
+  const_reverse_row_iterator operator++(int);				//[t82]
+  const_reverse_row_iterator &operator--()				//[t82]
+      { iterator_type::operator++(); return *this; }
+  const_reverse_row_iterator operator--(int);				//[t82]
+  const_reverse_row_iterator &operator+=(difference_type i)		//[t82]
+      { iterator_type::operator-=(i); return *this; }
+  const_reverse_row_iterator &operator-=(difference_type i)		//[t82]
+      { iterator_type::operator+=(i); return *this; }
   //@}
 
   /**
    * @name Arithmetic operators
    */
   //@{
-  [[nodiscard]] const_reverse_row_iterator operator+(difference_type i) const
-  {
-    return const_reverse_row_iterator{base() - i};
-  }
-  [[nodiscard]] const_reverse_row_iterator operator-(difference_type i)
-  {
-    return const_reverse_row_iterator{base() + i};
-  }
-  [[nodiscard]] difference_type
-  operator-(const_reverse_row_iterator const &rhs) const
-  {
-    return rhs.const_row_iterator::operator-(*this);
-  }
+  const_reverse_row_iterator operator+(difference_type i) const		//[t82]
+      { return const_reverse_row_iterator{base()-i}; }
+  const_reverse_row_iterator operator-(difference_type i)		//[t82]
+      { return const_reverse_row_iterator{base()+i}; }
+  difference_type
+    operator-(const const_reverse_row_iterator &rhs) const		//[t82]
+      { return rhs.const_row_iterator::operator-(*this); }
   //@}
 
   /**
    * @name Comparisons
    */
   //@{
-  [[nodiscard]] bool
-  operator==(const_reverse_row_iterator const &rhs) const noexcept
-  {
-    return iterator_type::operator==(rhs);
-  }
-  [[nodiscard]] bool
-  operator!=(const_reverse_row_iterator const &rhs) const noexcept
-  {
-    return !operator==(rhs);
-  }
+  bool operator==(const const_reverse_row_iterator &rhs) const noexcept	//[t82]
+      { return iterator_type::operator==(rhs); }
+  bool operator!=(const const_reverse_row_iterator &rhs) const noexcept	//[t82]
+      { return !operator==(rhs); }
 
-  [[nodiscard]] bool operator<(const_reverse_row_iterator const &rhs) const
-  {
-    return iterator_type::operator>(rhs);
-  }
-  [[nodiscard]] bool operator<=(const_reverse_row_iterator const &rhs) const
-  {
-    return iterator_type::operator>=(rhs);
-  }
-  [[nodiscard]] bool operator>(const_reverse_row_iterator const &rhs) const
-  {
-    return iterator_type::operator<(rhs);
-  }
-  [[nodiscard]] bool operator>=(const_reverse_row_iterator const &rhs) const
-  {
-    return iterator_type::operator<=(rhs);
-  }
+  bool operator<(const const_reverse_row_iterator &rhs) const		//[t82]
+      { return iterator_type::operator>(rhs); }
+  bool operator<=(const const_reverse_row_iterator &rhs) const		//[t82]
+      { return iterator_type::operator>=(rhs); }
+  bool operator>(const const_reverse_row_iterator &rhs) const		//[t82]
+      { return iterator_type::operator<(rhs); }
+  bool operator>=(const const_reverse_row_iterator &rhs) const		//[t82]
+      { return iterator_type::operator<=(rhs); }
   //@}
 };
 
 
-const_row_iterator const_row_iterator::operator+(difference_type o) const
+inline const_row_iterator
+const_row_iterator::operator+(difference_type o) const
 {
   return const_row_iterator{
-    row(home(), idx()), size_type(difference_type(col()) + o)};
+	row(home(), idx()),
+	size_type(difference_type(col()) + o)};
 }
 
 inline const_row_iterator
-operator+(const_row_iterator::difference_type o, const_row_iterator const &i)
-{
-  return i + o;
-}
+operator+(const_row_iterator::difference_type o, const_row_iterator i)
+	{ return i + o; }
 
 inline const_row_iterator
 const_row_iterator::operator-(difference_type o) const
 {
   return const_row_iterator{
-    row(home(), idx()), size_type(difference_type(col()) - o)};
+	row(home(), idx()),
+	size_type(difference_type(col()) - o)};
 }
 
 inline const_row_iterator::difference_type
-const_row_iterator::operator-(const_row_iterator const &i) const
-{
-  return difference_type(num() - i.num());
-}
+const_row_iterator::operator-(const_row_iterator i) const
+	{ return difference_type(num() - i.num()); }
 
 
-template<typename Tuple, std::size_t index>
-inline void row::extract_value(Tuple &t) const
-{
-  using field_type = strip_t<decltype(std::get<index>(t))>;
-#include "pqxx/internal/ignore-deprecated-pre.hxx"
-  field const f{*this, index};
-#include "pqxx/internal/ignore-deprecated-post.hxx"
-  std::get<index>(t) = from_string<field_type>(f);
-}
 } // namespace pqxx
 
-#include "pqxx/internal/compiler-internal-post.hxx"
+
+/*
+[1] Scott Meyers, in one of his essential books, "Effective C++" and "More
+Effective C++", points out that it is good style to have any class containing
+a member of pointer type define a destructor--just to show that it knows what
+it is doing with the pointer.  This helps prevent nasty memory leak / double
+deletion bugs typically resulting from programmers' omission to deal with such
+issues in their destructors.
+
+The @c -Weffc++ option in gcc generates warnings for noncompliance with Scott's
+style guidelines, and hence necessitates the definition of this destructor,
+trivial as it may be.
+*/
+
+
+#include "pqxx/compiler-internal-post.hxx"
+
 #endif

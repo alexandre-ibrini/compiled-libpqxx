@@ -1,63 +1,75 @@
-/* Definition of the pqxx::transaction class.
+/** Definition of the pqxx::transaction class.
  * pqxx::transaction represents a standard database transaction.
  *
  * DO NOT INCLUDE THIS FILE DIRECTLY; include pqxx/transaction instead.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_TRANSACTION
 #define PQXX_H_TRANSACTION
 
 #include "pqxx/compiler-public.hxx"
-#include "pqxx/internal/compiler-internal-pre.hxx"
+#include "pqxx/compiler-internal-pre.hxx"
 
 #include "pqxx/dbtransaction.hxx"
 
-namespace pqxx::internal
+
+/* Methods tested in eg. self-test program test1 are marked with "//[t01]"
+ */
+
+
+namespace pqxx
+{
+
+namespace internal
 {
 /// Helper base class for the @c transaction class template.
 class PQXX_LIBEXPORT basic_transaction : public dbtransaction
 {
 protected:
-  basic_transaction(
-    connection &c, zview begin_command, std::string_view tname);
-  basic_transaction(connection &c, zview begin_command, std::string &&tname);
-  basic_transaction(connection &c, zview begin_command);
-
-  virtual ~basic_transaction() noexcept override = 0;
+  basic_transaction(							//[t01]
+	connection_base &C,
+	const std::string &IsolationLevel,
+	readwrite_policy);
 
 private:
-  virtual void do_commit() override;
+  virtual void do_commit() override;					//[t01]
 };
-} // namespace pqxx::internal
+} // namespace internal
 
 
-namespace pqxx
-{
 /**
  * @ingroup transaction
  */
 //@{
 
-/// Standard back-end transaction, templatised on isolation level.
+/// Standard back-end transaction, templatized on isolation level
 /** This is the type you'll normally want to use to represent a transaction on
  * the database.
  *
- * Usage example: double all wages.
+ * While you may choose to create your own transaction object to interface to
+ * the database backend, it is recommended that you wrap your transaction code
+ * into a transactor code instead and let the transaction be created for you.
+ * @see pqxx/transactor.hxx
+ *
+ * If you should find that using a transactor makes your code less portable or
+ * too complex, go ahead, create your own transaction anyway.
+ *
+ * Usage example: double all wages
  *
  * @code
  * extern connection C;
  * work T(C);
  * try
  * {
- *   T.exec0("UPDATE employees SET wage=wage*2");
+ *   T.exec("UPDATE employees SET wage=wage*2");
  *   T.commit();	// NOTE: do this inside try block
  * }
- * catch (exception const &e)
+ * catch (const exception &e)
  * {
  *   cerr << e.what() << endl;
  *   T.abort();		// Usually not needed; same happens when T's life ends.
@@ -65,34 +77,29 @@ namespace pqxx
  * @endcode
  */
 template<
-  isolation_level ISOLATION = isolation_level::read_committed,
-  write_policy READWRITE = write_policy::read_write>
-class transaction final : public internal::basic_transaction
+	isolation_level ISOLATIONLEVEL=read_committed,
+	readwrite_policy READWRITE=read_write>
+class transaction : public internal::basic_transaction
 {
 public:
-  /// Begin a transaction.
-  /**
-   * @param c Connection for this transaction to operate on.
-   * @param tname Optional name for transaction.  Must begin with a letter and
-   * may contain letters and digits only.
-   */
-  transaction(connection &c, std::string_view tname) :
-          internal::basic_transaction{
-            c, internal::begin_cmd<ISOLATION, READWRITE>, tname}
-  {}
+  using isolation_tag = isolation_traits<ISOLATIONLEVEL>;
 
-  /// Begin a transaction.
+  /// Create a transaction.
   /**
-   * @param c Connection for this transaction to operate on.
-   * @param tname Optional name for transaction.  Must begin with a letter and
-   * may contain letters and digits only.
+   * @param C Connection for this transaction to operate on
+   * @param TName Optional name for transaction; must begin with a letter and
+   * may contain letters and digits only
    */
-  explicit transaction(connection &c) :
-          internal::basic_transaction{
-            c, internal::begin_cmd<ISOLATION, READWRITE>}
-  {}
+  explicit transaction(connection_base &C, const std::string &TName):	//[t01]
+    namedclass{fullname("transaction", isolation_tag::name()), TName},
+    internal::basic_transaction(C, isolation_tag::name(), READWRITE)
+	{ Begin(); }
 
-  virtual ~transaction() noexcept override { close(); }
+  explicit transaction(connection_base &C) :				//[t01]
+    transaction(C, "") {}
+
+  virtual ~transaction() noexcept
+	{ End(); }
 };
 
 
@@ -100,11 +107,10 @@ public:
 using work = transaction<>;
 
 /// Read-only transaction.
-using read_transaction =
-  transaction<isolation_level::read_committed, write_policy::read_only>;
+using read_transaction = transaction<read_committed, read_only>;
 
 //@}
-} // namespace pqxx
+}
 
-#include "pqxx/internal/compiler-internal-post.hxx"
+#include "pqxx/compiler-internal-post.hxx"
 #endif

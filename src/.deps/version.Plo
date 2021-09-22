@@ -1,0 +1,54 @@
+version.lo: version.cxx /usr/include/stdc-predef.h \
+ ../include/pqxx/compiler-internal.hxx \
+ ../include/pqxx/config-internal-compiler.h \
+ ../include/pqxx/compiler-public.hxx \
+ ../include/pqxx/config-public-compiler.h /usr/include/c++/7/ciso646 \
+ /usr/include/aarch64-linux-gnu/c++/7/bits/c++config.h \
+ /usr/include/aarch64-linux-gnu/c++/7/bits/os_defines.h \
+ /usr/include/features.h /usr/include/aarch64-linux-gnu/sys/cdefs.h \
+ /usr/include/aarch64-linux-gnu/bits/wordsize.h \
+ /usr/include/aarch64-linux-gnu/bits/long-double.h \
+ /usr/include/aarch64-linux-gnu/gnu/stubs.h \
+ /usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h \
+ /usr/include/aarch64-linux-gnu/c++/7/bits/cpu_defines.h \
+ ../include/pqxx/version ../include/pqxx/version.hxx \
+ ../include/pqxx/compiler-internal-pre.hxx \
+ ../include/pqxx/compiler-internal-post.hxx
+
+/usr/include/stdc-predef.h:
+
+../include/pqxx/compiler-internal.hxx:
+
+../include/pqxx/config-internal-compiler.h:
+
+../include/pqxx/compiler-public.hxx:
+
+../include/pqxx/config-public-compiler.h:
+
+/usr/include/c++/7/ciso646:
+
+/usr/include/aarch64-linux-gnu/c++/7/bits/c++config.h:
+
+/usr/include/aarch64-linux-gnu/c++/7/bits/os_defines.h:
+
+/usr/include/features.h:
+
+/usr/include/aarch64-linux-gnu/sys/cdefs.h:
+
+/usr/include/aarch64-linux-gnu/bits/wordsize.h:
+
+/usr/include/aarch64-linux-gnu/bits/long-double.h:
+
+/usr/include/aarch64-linux-gnu/gnu/stubs.h:
+
+/usr/include/aarch64-linux-gnu/gnu/stubs-lp64.h:
+
+/usr/include/aarch64-linux-gnu/c++/7/bits/cpu_defines.h:
+
+../include/pqxx/version:
+
+../include/pqxx/version.hxx:
+
+../include/pqxx/compiler-internal-pre.hxx:
+
+../include/pqxx/compiler-internal-post.hxx:
