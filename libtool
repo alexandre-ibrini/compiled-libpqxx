@@ -65,14 +65,14 @@ ECHO="printf %s\\n"
 PATH_SEPARATOR=":"
 
 # The host system.
-host_alias=
+host_alias=arm
 host=arm-unknown-none
 host_os=none
 
 # The build system.
-build_alias=arm
-build=arm-unknown-none
-build_os=none
+build_alias=
+build=x86_64-unknown-linux-gnu
+build_os=linux-gnu
 
 # A sed program that does not truncate output.
 SED="/bin/sed"
@@ -90,7 +90,7 @@ EGREP="/bin/grep -E"
 FGREP="/bin/grep -F"
 
 # A BSD- or MS-compatible name lister.
-NM="/usr/bin/nm -B"
+NM="nm"
 
 # Whether we need soft or hard links.
 LN_S="ln -s"
