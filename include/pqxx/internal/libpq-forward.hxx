@@ -2,30 +2,33 @@
  *
  * DO NOT INCLUDE THIS FILE when building client programs.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 extern "C"
 {
-  struct pg_conn;
-  struct pg_result;
-  struct pgNotify;
+struct pg_conn;
+struct pg_result;
+struct pgNotify;
 }
 
-/// Forward declarations of libpq types as needed in libpqxx headers.
-namespace pqxx::internal::pq
+namespace pqxx
+{
+namespace internal
+{
+/// Forward declarations of libpq types as needed in libpqxx headers
+namespace pq
 {
 using PGconn = pg_conn;
 using PGresult = pg_result;
 using PGnotify = pgNotify;
-using PQnoticeProcessor = void (*)(void *, char const *);
-} // namespace pqxx::internal::pq
+using PQnoticeProcessor = void (*)(void *, const char *);
+}
+}
 
-namespace pqxx
-{
-/// PostgreSQL database row identifier.
+/// PostgreSQL database row identifier
 using oid = unsigned int;
-} // namespace pqxx
+} // extern "C"

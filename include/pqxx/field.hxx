@@ -1,28 +1,44 @@
-/* Definitions for the pqxx::field class.
+/** Definitions for the pqxx::field class.
  *
  * pqxx::field refers to a field in a query result.
  *
  * DO NOT INCLUDE THIS FILE DIRECTLY; include pqxx/field instead.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_FIELD
 #define PQXX_H_FIELD
 
 #include "pqxx/compiler-public.hxx"
-#include "pqxx/internal/compiler-internal-pre.hxx"
+#include "pqxx/compiler-internal-pre.hxx"
+#include "pqxx/internal/type_utils.hxx"
 
+#if defined(PQXX_HAVE_OPTIONAL)
 #include <optional>
 
+/* Use std::experimental::optional as a fallback for std::optional, if
+ * present.
+ *
+ * This may break compilation for some software, if using a libpqxx that was
+ * configured for a different language version.  To stop libpqxx headers from
+ * using or supporting std::experimental::optional, define a macro
+ * PQXX_HIDE_EXP_OPTIONAL when building your software.
+ */
+#elif defined(PQXX_HAVE_EXP_OPTIONAL) && !defined(PQXX_HIDE_EXP_OPTIONAL)
+#include <experimental/optional>
+#endif
+
 #include "pqxx/array.hxx"
-#include "pqxx/composite.hxx"
 #include "pqxx/result.hxx"
 #include "pqxx/strconv.hxx"
 #include "pqxx/types.hxx"
+
+
+// Methods tested in eg. test module test01 are marked with "//[t01]".
 
 namespace pqxx
 {
@@ -35,17 +51,12 @@ class PQXX_LIBEXPORT field
 public:
   using size_type = field_size_type;
 
-  /// Constructor.  Do not call this yourself; libpqxx will do it for you.
+  /// Constructor.
   /** Create field as reference to a field in a result set.
-   * @param r Row that this field is part of.
-   * @param c Column number of this field.
+   * @param R Row that this field is part of.
+   * @param C Column number of this field.
    */
-  PQXX_DEPRECATED("Do not construct fields yourself.  Get them from the row.")
-  field(row const &r, row_size_type c) noexcept;
-
-  /// Constructor.  Do not call this yourself; libpqxx will do it for you.
-  PQXX_DEPRECATED("Do not construct fields yourself.  Get them from the row.")
-  field() = default;
+  field(const row &R, row_size_type C) noexcept;			//[t01]
 
   /**
    * @name Comparison
@@ -68,178 +79,126 @@ public:
    * equivalent and equally valid) encodings of the same Unicode character
    * etc.
    */
-  [[nodiscard]] PQXX_PURE bool operator==(field const &) const;
+  bool operator==(const field &) const;				//[t75]
 
   /// Byte-by-byte comparison (all nulls are considered equal)
   /** @warning See operator==() for important information about this operator
    */
-  [[nodiscard]] PQXX_PURE bool operator!=(field const &rhs) const
-  {
-    return not operator==(rhs);
-  }
+  bool operator!=(const field &rhs) const				//[t82]
+						   {return not operator==(rhs);}
   //@}
 
   /**
    * @name Column information
    */
   //@{
-  /// Column name.
-  [[nodiscard]] PQXX_PURE char const *name() const;
+  /// Column name
+  const char *name() const;						//[t11]
 
-  /// Column type.
-  [[nodiscard]] oid PQXX_PURE type() const;
+  /// Column type
+  oid type() const;							//[t07]
 
   /// What table did this column come from?
-  [[nodiscard]] PQXX_PURE oid table() const;
+  oid table() const;							//[t02]
 
-  /// Return row number.  The first row is row 0, the second is row 1, etc.
-  PQXX_PURE row_size_type num() const { return col(); }
+  row_size_type num() const { return col(); }				//[t82]
 
   /// What column number in its originating table did this column come from?
-  [[nodiscard]] PQXX_PURE row_size_type table_column() const;
+  row_size_type table_column() const;					//[t93]
   //@}
 
   /**
    * @name Content access
    */
   //@{
-  /// Read as @c string_view, or an empty one if null.
-  [[nodiscard]] PQXX_PURE std::string_view view() const
-  {
-    return std::string_view(c_str(), size());
-  }
-
-  /// Read as plain C string.
+  /// Read as plain C string
   /** Since the field's data is stored internally in the form of a
    * zero-terminated C string, this is the fastest way to read it.  Use the
    * to() or as() functions to convert the string to other types such as
    * @c int, or to C++ strings.
-   *
-   * Do not use this for BYTEA values, or other binary values.  To read those,
-   * convert the value to your desired type using @c to() or @c as().  For
-   * example: @c f.as<std::basic_string<std::byte>>().
    */
-  [[nodiscard]] PQXX_PURE char const *c_str() const;
+  const char *c_str() const;						//[t02]
 
   /// Is this field's value null?
-  [[nodiscard]] PQXX_PURE bool is_null() const noexcept;
+  bool is_null() const noexcept;					//[t12]
 
   /// Return number of bytes taken up by the field's value.
-  [[nodiscard]] PQXX_PURE size_type size() const noexcept;
-
-  /// Read value into obj; or if null, leave obj untouched and return @c false.
-  /** This can be used with optional types (except pointers other than C-style
-   * strings).
+  /**
+   * Includes the terminating zero byte.
    */
-  template<typename T>
-  auto to(T &obj) const -> typename std::enable_if_t<
-    (not std::is_pointer<T>::value or std::is_same<T, char const *>::value),
-    bool>
+  size_type size() const noexcept;					//[t11]
+
+  /// Read value into Obj; or leave Obj untouched and return @c false if null
+  /** Note this can be used with optional types (except pointers other than
+   * C-strings)
+   */
+  template<typename T> auto to(T &Obj) const				//[t03]
+    -> typename std::enable_if<(
+      not std::is_pointer<T>::value
+      or std::is_same<T, const char*>::value
+    ), bool>::type
   {
-    if (is_null())
-    {
-      return false;
-    }
-    else
-    {
-      auto const bytes{c_str()};
-      from_string(bytes, obj);
-      return true;
-    }
+    const char *const bytes = c_str();
+    if (bytes[0] == '\0' and is_null()) return false;
+    from_string(bytes, Obj);
+    return true;
   }
 
-  /// Read field as a composite value, write its components into @c fields.
-  /** @warning This is still experimental.  It may change or be replaced.
-   *
-   * Returns whether the field was null.  If it was, it will not touch the
-   * values in @c fields.
+  /// Read value into Obj; or leave Obj untouched and return @c false if null
+  template<typename T> bool operator>>(T &Obj) const			//[t07]
+      { return to(Obj); }
+
+  /// Read value into Obj; or use Default & return @c false if null
+  /** Note this can be used with optional types (except pointers other than
+   * C-strings)
    */
-  template<typename... T> bool composite_to(T &...fields) const
+  template<typename T> auto to(T &Obj, const T &Default) const	//[t12]
+    -> typename std::enable_if<(
+      not std::is_pointer<T>::value
+      or std::is_same<T, const char*>::value
+    ), bool>::type
   {
-    if (is_null())
-    {
-      return false;
-    }
-    else
-    {
-      parse_composite(m_home.m_encoding, view(), fields...);
-      return true;
-    }
+    const bool NotNull = to(Obj);
+    if (not NotNull) Obj = Default;
+    return NotNull;
   }
 
-  /// Read value into obj; or leave obj untouched and return @c false if null.
-  template<typename T> bool operator>>(T &obj) const { return to(obj); }
-
-  /// Read value into obj; or if null, use default value and return @c false.
-  /** This can be used with @c std::optional, as well as with standard smart
-   * pointer types, but not with raw pointers.  If the conversion from a
-   * PostgreSQL string representation allocates a pointer (e.g. using @c new),
-   * then the object's later deallocation should be baked in as well, right
-   * from the point where the object is created.  So if you want a pointer, use
-   * a smart pointer, not a raw pointer.
-   *
-   * There is one exception, of course: C-style strings.  Those are just
-   * pointers to the field's internal text data.
-   */
-  template<typename T>
-  auto to(T &obj, T const &default_value) const -> typename std::enable_if_t<
-    (not std::is_pointer<T>::value or std::is_same<T, char const *>::value),
-    bool>
-  {
-    bool const null{is_null()};
-    if (null)
-      obj = default_value;
-    else
-      obj = from_string<T>(this->view());
-    return not null;
-  }
-
-  /// Return value as object of given type, or default value if null.
+  /// Return value as object of given type, or Default if null
   /** Note that unless the function is instantiated with an explicit template
    * argument, the Default value's type also determines the result type.
    */
-  template<typename T> T as(T const &default_value) const
+  template<typename T> T as(const T &Default) const			//[t01]
   {
-    if (is_null())
-      return default_value;
-    else
-      return from_string<T>(this->view());
+    T Obj;
+    to(Obj, Default);
+    return Obj;
   }
 
-  /// Return value as object of given type, or throw exception if null.
+  /// Return value as object of given type, or throw exception if null
   /** Use as `as<std::optional<int>>()` or `as<my_untemplated_optional_t>()` as
    * an alternative to `get<int>()`; this is disabled for use with raw pointers
    * (other than C-strings) because storage for the value can't safely be
    * allocated here
    */
-  template<typename T> T as() const
+  template<typename T> T as() const					//[t45]
   {
-    if (is_null())
-    {
-      if constexpr (not nullness<T>::has_null)
-      {
-        internal::throw_null_conversion(type_name<T>);
-      }
-      else
-      {
-        return nullness<T>::null();
-      }
-    }
-    else
-    {
-      return from_string<T>(this->view());
-    }
+    T Obj;
+    if (not to(Obj)) Obj = string_traits<T>::null();
+    return Obj;
   }
 
-  /// Return value wrapped in some optional type (empty for nulls).
-  /** Use as `get<int>()` as before to obtain previous behavior, or specify
-   * container type with `get<int, std::optional>()`
+  /// Return value wrapped in some optional type (empty for nulls)
+  /** Use as `get<int>()` as before to obtain previous behavior (i.e. only
+   * usable when `std::optional` or `std::experimental::optional` are
+   * available), or specify container type with `get<int, std::optional>()`
    */
-  template<typename T, template<typename> class O = std::optional>
-  constexpr O<T> get() const
-  {
-    return as<O<T>>();
-  }
+  template<typename T, template<typename> class O
+#if defined(PQXX_HAVE_OPTIONAL)
+    = std::optional
+#elif defined(PQXX_HAVE_EXP_OPTIONAL) && !defined(PQXX_HIDE_EXP_OPTIONAL)
+    = std::experimental::optional
+#endif
+  > constexpr O<T> get() const { return as<O<T>>(); }
 
   /// Parse the field as an SQL array.
   /** Call the parser to retrieve values (and structure) from the array.
@@ -249,141 +208,55 @@ public:
    * object alive as well.
    */
   array_parser as_array() const
-  {
-    return array_parser{c_str(), m_home.m_encoding};
-  }
+        { return array_parser{c_str(), m_home.m_encoding}; }
   //@}
 
 
 protected:
-  result const &home() const noexcept { return m_home; }
-  result::size_type idx() const noexcept { return m_row; }
-  row_size_type col() const noexcept { return m_col; }
+  const result &home() const noexcept { return m_home; }
+  size_t idx() const noexcept { return m_row; }
+  row_size_type col() const noexcept { return row_size_type(m_col); }
 
   /**
-   * You'd expect this to be unsigned, but due to the way reverse iterators
+   * You'd expect this to be a size_t, but due to the way reverse iterators
    * are related to regular iterators, it must be allowed to underflow to -1.
    */
-  row_size_type m_col;
+  long m_col;
 
 private:
   result m_home;
-  result::size_type m_row;
+  size_t m_row;
 };
 
 
-template<> inline bool field::to<std::string>(std::string &obj) const
-{
-  bool const null{is_null()};
-  if (not null)
-    obj = std::string{view()};
-  return not null;
-}
-
-
+/// Specialization: <tt>to(string &)</tt>.
 template<>
-inline bool field::to<std::string>(
-  std::string &obj, std::string const &default_value) const
+inline bool field::to<std::string>(std::string &Obj) const
 {
-  bool const null{is_null()};
-  if (null)
-    obj = default_value;
-  else
-    obj = std::string{view()};
-  return not null;
+  const char *const bytes = c_str();
+  if (bytes[0] == '\0' and is_null()) return false;
+  Obj = std::string{bytes, size()};
+  return true;
 }
 
-
-/// Specialization: <tt>to(char const *&)</tt>.
+/// Specialization: <tt>to(const char *&)</tt>.
 /** The buffer has the same lifetime as the data in this result (i.e. of this
  * result object, or the last remaining one copied from it etc.), so take care
  * not to use it after the last result object referring to this query result is
  * destroyed.
  */
-template<> inline bool field::to<char const *>(char const *&obj) const
-{
-  bool const null{is_null()};
-  if (not null)
-    obj = c_str();
-  return not null;
-}
-
-
-template<> inline bool field::to<std::string_view>(std::string_view &obj) const
-{
-  bool const null{is_null()};
-  if (not null)
-    obj = view();
-  return not null;
-}
-
-
 template<>
-inline bool field::to<std::string_view>(
-  std::string_view &obj, std::string_view const &default_value) const
+inline bool field::to<const char *>(const char *&Obj) const
 {
-  bool const null{is_null()};
-  if (null)
-    obj = default_value;
-  else
-    obj = view();
-  return not null;
+  if (is_null()) return false;
+  Obj = c_str();
+  return true;
 }
 
 
-template<> inline std::string_view field::as<std::string_view>() const
-{
-  if (is_null())
-    internal::throw_null_conversion(type_name<std::string_view>);
-  return view();
-}
-
-
-template<>
-inline std::string_view
-field::as<std::string_view>(std::string_view const &default_value) const
-{
-  return is_null() ? default_value : view();
-}
-
-
-template<> inline bool field::to<zview>(zview &obj) const
-{
-  bool const null{is_null()};
-  if (not null)
-    obj = zview{c_str(), size()};
-  return not null;
-}
-
-
-template<>
-inline bool field::to<zview>(zview &obj, zview const &default_value) const
-{
-  bool const null{is_null()};
-  if (null)
-    obj = default_value;
-  else
-    obj = zview{c_str(), size()};
-  return not null;
-}
-
-
-template<> inline zview field::as<zview>() const
-{
-  if (is_null())
-    internal::throw_null_conversion(type_name<zview>);
-  return zview{c_str(), size()};
-}
-
-
-template<> inline zview field::as<zview>(zview const &default_value) const
-{
-  return is_null() ? default_value : zview{c_str(), size()};
-}
-
-
-template<typename CHAR = char, typename TRAITS = std::char_traits<CHAR>>
-class field_streambuf : public std::basic_streambuf<CHAR, TRAITS>
+template<typename CHAR=char, typename TRAITS=std::char_traits<CHAR>>
+  class field_streambuf :
+  public std::basic_streambuf<CHAR, TRAITS>
 {
 public:
   using char_type = CHAR;
@@ -394,30 +267,34 @@ public:
   using openmode = std::ios::openmode;
   using seekdir = std::ios::seekdir;
 
-  explicit field_streambuf(field const &f) : m_field{f} { initialize(); }
+  explicit field_streambuf(const field &F) :			//[t74]
+    m_field{F}
+  {
+    initialize();
+  }
 
 protected:
   virtual int sync() override { return traits_type::eof(); }
 
+protected:
   virtual pos_type seekoff(off_type, seekdir, openmode) override
-  {
-    return traits_type::eof();
-  }
+	{ return traits_type::eof(); }
   virtual pos_type seekpos(pos_type, openmode) override
-  {
-    return traits_type::eof();
-  }
-  virtual int_type overflow(int_type) override { return traits_type::eof(); }
-  virtual int_type underflow() override { return traits_type::eof(); }
+	{return traits_type::eof();}
+  virtual int_type overflow(int_type) override
+	{ return traits_type::eof(); }
+  virtual int_type underflow() override
+	{ return traits_type::eof(); }
 
 private:
-  field const &m_field;
+  const field &m_field;
 
   int_type initialize()
   {
-    auto g{static_cast<char_type *>(const_cast<char *>(m_field.c_str()))};
-    this->setg(g, g, g + std::size(m_field));
-    return int_type(std::size(m_field));
+    char_type *G =
+      reinterpret_cast<char_type *>(const_cast<char *>(m_field.c_str()));
+    this->setg(G, G, G + m_field.size());
+    return int_type(m_field.size());
   }
 };
 
@@ -431,8 +308,9 @@ private:
  *
  * This class has only been tested for the char type (and its default traits).
  */
-template<typename CHAR = char, typename TRAITS = std::char_traits<CHAR>>
-class basic_fieldstream : public std::basic_istream<CHAR, TRAITS>
+template<typename CHAR=char, typename TRAITS=std::char_traits<CHAR>>
+  class basic_fieldstream :
+    public std::basic_istream<CHAR, TRAITS>
 {
   using super = std::basic_istream<CHAR, TRAITS>;
 
@@ -443,10 +321,8 @@ public:
   using pos_type = typename traits_type::pos_type;
   using off_type = typename traits_type::off_type;
 
-  basic_fieldstream(field const &f) : super{nullptr}, m_buf{f}
-  {
-    super::init(&m_buf);
-  }
+  basic_fieldstream(const field &F) : super{nullptr}, m_buf{F}
+	{ super::init(&m_buf); }
 
 private:
   field_streambuf<CHAR, TRAITS> m_buf;
@@ -457,8 +333,8 @@ using fieldstream = basic_fieldstream<char>;
 /// Write a result field to any type of stream
 /** This can be convenient when writing a field to an output stream.  More
  * importantly, it lets you write a field to e.g. a @c stringstream which you
- * can then use to read, format and convert the field in ways that to() does
- * not support.
+ * can then use to read, format and convert the field in ways that to() does not
+ * support.
  *
  * Example: parse a field into a variable of the nonstandard
  * "<tt>long long</tt>" type.
@@ -476,54 +352,22 @@ using fieldstream = basic_fieldstream<char>;
  * @endcode
  */
 template<typename CHAR>
-inline std::basic_ostream<CHAR> &
-operator<<(std::basic_ostream<CHAR> &s, field const &value)
+inline std::basic_ostream<CHAR> &operator<<(
+	std::basic_ostream<CHAR> &S, const field &F)		        //[t46]
 {
-  s.write(value.c_str(), std::streamsize(std::size(value)));
-  return s;
+  S.write(F.c_str(), std::streamsize(F.size()));
+  return S;
 }
 
 
-/// Convert a field's value to type @c T.
-/** Unlike the "regular" @c from_string, this knows how to deal with null
- * values.
- */
-template<typename T> inline T from_string(field const &value)
-{
-  if (value.is_null())
-  {
-    if constexpr (nullness<T>::has_null)
-      return nullness<T>::null();
-    else
-      internal::throw_null_conversion(type_name<T>);
-  }
-  else
-  {
-    return from_string<T>(value.view());
-  }
-}
-
-
-/// Convert a field's value to @c nullptr_t.
-/** Yes, you read that right.  This conversion does nothing useful.  It always
- * returns @c nullptr.
- *
- * Except... what if the field is not null?  In that case, this throws
- * @c conversion_error.
- */
-template<>
-inline std::nullptr_t from_string<std::nullptr_t>(field const &value)
-{
-  if (not value.is_null())
-    throw conversion_error{
-      "Extracting non-null field into nullptr_t variable."};
-  return nullptr;
-}
-
+/// Convert a field's string contents to another type.
+template<typename T>
+inline void from_string(const field &F, T &Obj)				//[t46]
+	{ from_string(F.c_str(), Obj, F.size()); }
 
 /// Convert a field to a string.
-template<> PQXX_LIBEXPORT std::string to_string(field const &value);
-} // namespace pqxx
+template<> PQXX_LIBEXPORT std::string to_string(const field &Obj);	//[t74]
 
-#include "pqxx/internal/compiler-internal-post.hxx"
+} // namespace pqxx
+#include "pqxx/compiler-internal-post.hxx"
 #endif

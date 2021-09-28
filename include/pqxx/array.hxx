@@ -1,18 +1,18 @@
-/* Handling of SQL arrays.
+/** Handling of SQL arrays.
  *
  * DO NOT INCLUDE THIS FILE DIRECTLY; include pqxx/field instead.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_ARRAY
 #define PQXX_H_ARRAY
 
 #include "pqxx/compiler-public.hxx"
-#include "pqxx/internal/compiler-internal-pre.hxx"
+#include "pqxx/compiler-internal-pre.hxx"
 
 #include "pqxx/internal/encoding_group.hxx"
 #include "pqxx/internal/encodings.hxx"
@@ -47,7 +47,7 @@ class PQXX_LIBEXPORT array_parser
 {
 public:
   /// What's the latest thing found in the array?
-  enum class juncture
+  enum juncture
   {
     /// Starting a new row.
     row_start,
@@ -61,10 +61,11 @@ public:
     done,
   };
 
+// XXX: Actually _pass_ encoding group!
   /// Constructor.  You don't need this; use @c field::as_array instead.
   explicit array_parser(
-    std::string_view input,
-    internal::encoding_group = internal::encoding_group::MONOBYTE);
+	const char input[],
+	internal::encoding_group=internal::encoding_group::MONOBYTE);
 
   /// Parse the next step in the array.
   /** Returns what it found.  If the juncture is @c string_value, the string
@@ -75,11 +76,12 @@ public:
   std::pair<juncture, std::string> get_next();
 
 private:
-  std::string_view m_input;
+  const char *const m_input;
+  const std::string::size_type m_end;
   internal::glyph_scanner_func *const m_scan;
 
   /// Current parsing position in the input.
-  std::string::size_type m_pos = 0u;
+  std::string::size_type m_pos;
 
   std::string::size_type scan_single_quoted_string() const;
   std::string parse_single_quoted_string(std::string::size_type end) const;
@@ -89,10 +91,11 @@ private:
   std::string parse_unquoted_string(std::string::size_type end) const;
 
   std::string::size_type scan_glyph(std::string::size_type pos) const;
-  std::string::size_type
-  scan_glyph(std::string::size_type pos, std::string::size_type end) const;
+  std::string::size_type scan_glyph(
+	std::string::size_type pos,
+	std::string::size_type end) const;
 };
 } // namespace pqxx
 
-#include "pqxx/internal/compiler-internal-post.hxx"
+#include "pqxx/compiler-internal-post.hxx"
 #endif

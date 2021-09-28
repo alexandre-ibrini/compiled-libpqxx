@@ -1,30 +1,31 @@
-/* Helper classes for prepared statements and parameterised statements.
+/** Helper classes for defining and executing prepared statements.
  *
- * See the connection class for more about such statements.
+ * See the connection_base hierarchy for more about prepared statements.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_PREPARED_STATEMENT
 #define PQXX_H_PREPARED_STATEMENT
 
 #include "pqxx/compiler-public.hxx"
-#include "pqxx/internal/compiler-internal-pre.hxx"
+#include "pqxx/compiler-internal-pre.hxx"
 
-#include "pqxx/internal/statement_parameters.hxx"
 #include "pqxx/types.hxx"
+#include "pqxx/internal/statement_parameters.hxx"
 
 
+
+namespace pqxx
+{
 /// Dedicated namespace for helper types related to prepared statements.
-namespace pqxx::prepare
+namespace prepare
 {
 /// Pass a number of statement parameters only known at runtime.
-/** @deprecated Use @c params instead.
- *
- * When you call any of the @c exec_params functions, the number of arguments
+/** When you call any of the @c exec_params functions, the number of arguments
  * is normally known at compile time.  This helper function supports the case
  * where it is not.
  *
@@ -39,18 +40,15 @@ namespace pqxx::prepare
  * @param end A pointer or iterator for iterating parameters.
  * @return An object representing the parameters.
  */
-template<typename IT>
-[[deprecated("Use params instead.")]] constexpr inline auto
+template<typename IT> inline pqxx::internal::dynamic_params<IT>
 make_dynamic_params(IT begin, IT end)
 {
-  return pqxx::internal::dynamic_params(begin, end);
+  return pqxx::internal::dynamic_params<IT>(begin, end);
 }
 
 
 /// Pass a number of statement parameters only known at runtime.
-/** @deprecated Use @c params instead.
- *
- * When you call any of the @c exec_params functions, the number of arguments
+/** When you call any of the @c exec_params functions, the number of arguments
  * is normally known at compile time.  This helper function supports the case
  * where it is not.
  *
@@ -65,187 +63,110 @@ make_dynamic_params(IT begin, IT end)
  * @return An object representing the parameters.
  */
 template<typename C>
-[[nodiscard]] constexpr inline auto make_dynamic_params(C const &container)
+inline pqxx::internal::dynamic_params<typename C::const_iterator>
+make_dynamic_params(const C &container)
 {
-  using IT = typename C::const_iterator;
-  return pqxx::internal::dynamic_params<IT>{container};
+  return pqxx::internal::dynamic_params<typename C::const_iterator>(container);
 }
-
-
-/// Pass a number of statement parameters only known at runtime.
-/** @deprecated User @c params instead.
- *
- * When you call any of the @c exec_params functions, the number of arguments
- * is normally known at compile time.  This helper function supports the case
- * where it is not.
- *
- * Use this function to pass a variable number of parameters, based on a
- * container of parameter values.
- *
- * The technique combines with the regular static parameters.  You can use it
- * to insert dynamic parameter lists in any place, or places, among the call's
- * parameters.  You can even insert multiple dynamic containers.
- *
- * @param container A container of parameter values.
- * @param accessor For each parameter @c p, pass @c accessor(p).
- * @return An object representing the parameters.
- */
-template<typename C, typename ACCESSOR>
-[[nodiscard]] constexpr inline auto
-make_dynamic_params(C &container, ACCESSOR accessor)
-{
-  using IT = decltype(std::begin(container));
-  return pqxx::internal::dynamic_params<IT, ACCESSOR>{container, accessor};
-}
-} // namespace pqxx::prepare
-
+} // namespace prepare
+} // namespace pqxx
 
 namespace pqxx
 {
-/// Build a parameter list for a parameterised or prepared statement.
-/** When calling a parameterised statement or a prepared statement, you can
- * pass parameters into the statement directly in the invocation, as additional
- * arguments to @c exec_prepared or @c exec_params.  But in complex cases,
- * sometimes that's just not convenient.
- *
- * In those situations, you can create a @c params and append your parameters
- * into that, one by one.  Then you pass the @c params to @c exec_prepared or
- * @c exec_params.
- *
- * Combinations also work: if you have a @c params containing a string
- * parameter, and you call @c exec_params with an @c int argument followed by
- * your @c params, you'll be passing the @c int as the first parameter and the
- * string as the second.  You can even insert a @c params in a @c params, or
- * pass two @c params objects to a statement.
+namespace prepare
+{
+/// Helper class for passing parameters to, and executing, prepared statements
+/** @deprecated As of 6.0, use @c transaction_base::exec_prepared and friends.
  */
-class PQXX_LIBEXPORT params
+class PQXX_LIBEXPORT invocation : internal::statement_parameters
 {
 public:
-  params() = default;
+  PQXX_DEPRECATED invocation(transaction_base &, const std::string &statement);
+  invocation &operator=(const invocation &) =delete;
 
-  /// Create a @c params pre-populated with args.  Feel free to add more later.
-  template<typename... Args> constexpr params(Args &&...args)
-  {
-    reserve(sizeof...(args));
-    append_pack(std::forward<Args>(args)...);
-  }
+  /// Execute!
+  result exec() const;
 
-  void reserve(std::size_t);
-  auto size() const { return std::size(m_params); }
-  auto ssize() const { return pqxx::internal::ssize(m_params); }
+  /// Has a statement of this name been defined?
+  bool exists() const;
 
-  /// Append a null value.
-  void append();
+  /// Pass null parameter.
+  invocation &operator()() { add_param(); return *this; }
 
-  /// Append a non-null zview parameter.
-  /** The underlying data must stay valid for as long as the @c params remains
-   * active.
+  /// Pass parameter value.
+  /**
+   * @param v parameter value; will be represented as a string internally.
    */
-  void append(zview);
+  template<typename T> invocation &operator()(const T &v)
+	{ add_param(v, true); return *this; }
 
-  /// Append a non-null string parameter.
-  /** Copies the underlying data into internal storage.  For best efficiency,
-   * use the @c zview variant if you can, or @c std::move().
+  /// Pass binary parameter value for a BYTEA field.
+  /**
+   * @param v binary string; will be passed on directly in binary form.
    */
-  void append(std::string const &);
+  invocation &operator()(const binarystring &v)
+	{ add_binary_param(v, true); return *this; }
 
-  /// Append a non-null string parameter.
-  void append(std::string &&);
-
-  /// Append a non-null binary parameter.
-  /** The underlying data must stay valid for as long as the @c params remains
-   * active.
+  /// Pass parameter value.
+  /**
+   * @param v parameter value (will be represented as a string internally).
+   * @param nonnull replaces value with null if set to false.
    */
-  void append(std::basic_string_view<std::byte>);
+  template<typename T> invocation &operator()(const T &v, bool nonnull)
+	{ add_param(v, nonnull); return *this; }
 
-  /// Append a non-null binary parameter.
-  /** Copies the underlying data into internal storage.  For best efficiency,
-   * use the @c std::basic_string_view<std::byte> variant if you can, or
-   * @c std::move().
+  /// Pass binary parameter value for a BYTEA field.
+  /**
+   * @param v binary string; will be passed on directly in binary form.
+   * @param nonnull determines whether to pass a real value, or nullptr.
    */
-  void append(std::basic_string<std::byte> const &);
+  invocation &operator()(const binarystring &v, bool nonnull)
+	{ add_binary_param(v, nonnull); return *this; }
 
-  /// Append a non-null binary parameter.
-  void append(std::basic_string<std::byte> &&);
-
-  /// @deprecated Append binarystring parameter.
-  /** The binarystring must stay valid for as long as the @c params remains
-   * active.
-   */
-  void append(binarystring const &value);
-
-  /// Append all parameters from value.
-  template<typename IT, typename ACCESSOR>
-  void append(pqxx::internal::dynamic_params<IT, ACCESSOR> const &value)
-  {
-    for (auto &param : value) append(value.access(param));
-  }
-
-  void append(params const &value);
-
-  void append(params &&value);
-
-  /// Append a non-null parameter, converting it to its string representation.
-  template<typename TYPE> void append(TYPE const &value)
-  {
-    // TODO: Pool storage for multiple string conversions in one buffer?
-    if constexpr (nullness<strip_t<TYPE>>::always_null)
-    {
-      ignore_unused(value);
-      m_params.emplace_back();
-    }
-    else if (is_null(value))
-    {
-      m_params.emplace_back();
-    }
-    else
-    {
-      m_params.emplace_back(entry{to_string(value)});
-    }
-  }
-
-  /// Append all elements of @c range as parameters.
-  template<typename RANGE> void append_multi(RANGE &range)
-  {
-    // TODO: If supported, reserve(std::size(m_params) + std::size(c)).
-    for (auto &value : range) append(value);
-  }
-
-  /// For internal use: Generate a @c params object for use in calls.
-  /** The params object encapsulates the pointers which we will need to pass to
-   * libpq when calling a parameterised or prepared statement.
+  /// Pass C-style parameter string, or null if pointer is null.
+  /**
+   * This version is for passing C-style strings; it's a template, so any
+   * pointer type that @c to_string accepts will do.
    *
-   * The pointers in the params will refer to storage owned by either the
-   * params object, or the caller.  This is not a problem because a @c c_params
-   * object is guaranteed to live only while the call is going on.  As soon as
-   * we climb back out of that call tree, we're done with that data.
+   * @param v parameter value (will be represented as a C++ string internally)
+   * @param nonnull replaces value with null if set to @c false
    */
-  pqxx::internal::c_params make_c_params() const;
+  template<typename T> invocation &operator()(T *v, bool nonnull=true)
+	{ add_param(v, nonnull); return *this; }
+
+  /// Pass C-style string parameter, or null if pointer is null.
+  /** This duplicates the pointer-to-template-argument-type version of the
+   * operator, but helps compilers with less advanced template implementations
+   * disambiguate calls where C-style strings are passed.
+   */
+  invocation &operator()(const char *v, bool nonnull=true)
+	{ add_param(v, nonnull); return *this; }
 
 private:
-  /// Recursively append a pack of params.
-  template<typename Arg, typename... More>
-  void append_pack(Arg &&arg, More &&...args)
-  {
-    this->append(std::forward<Arg>(arg));
-    // Recurse for remaining args.
-    append_pack(std::forward<More>(args)...);
-  }
+  transaction_base &m_home;
+  const std::string m_statement;
 
-  /// Terminating case: append an empty parameter pack.  It's not hard BTW.
-  void append_pack() {}
-
-  // The way we store a parameter depends on whether it's binary or text (most
-  // types are text), and whether we're responsible for storing the contents.
-  using entry = std::variant<
-    std::nullptr_t, zview, std::string, std::basic_string_view<std::byte>,
-    std::basic_string<std::byte>>;
-  std::vector<entry> m_params;
-
-  static constexpr std::string_view s_overflow{
-    "Statement parameter length overflow."sv};
+  invocation &setparam(const std::string &, bool nonnull);
 };
+
+
+namespace internal
+{
+/// Internal representation of a prepared statement definition.
+struct PQXX_LIBEXPORT prepared_def
+{
+  /// Text of prepared query.
+  std::string definition;
+  /// Has this prepared statement been prepared in the current session?
+  bool registered = false;
+
+  prepared_def() =default;
+  explicit prepared_def(const std::string &);
+};
+
+} // namespace pqxx::prepare::internal
+} // namespace pqxx::prepare
 } // namespace pqxx
 
-#include "pqxx/internal/compiler-internal-post.hxx"
+#include "pqxx/compiler-internal-post.hxx"
 #endif

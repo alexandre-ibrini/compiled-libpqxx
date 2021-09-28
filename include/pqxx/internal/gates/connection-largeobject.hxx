@@ -5,16 +5,14 @@
 
 namespace pqxx
 {
-class blob;
 class largeobject;
-} // namespace pqxx
 
-
-namespace pqxx::internal::gate
+namespace internal
 {
-class PQXX_PRIVATE connection_largeobject : callgate<connection>
+namespace gate
 {
-  friend class pqxx::blob;
+class PQXX_PRIVATE connection_largeobject : callgate<connection_base>
+{
   friend class pqxx::largeobject;
 
   connection_largeobject(reference x) : super(x) {}
@@ -23,9 +21,9 @@ class PQXX_PRIVATE connection_largeobject : callgate<connection>
 };
 
 
-class PQXX_PRIVATE const_connection_largeobject : callgate<connection const>
+class PQXX_PRIVATE const_connection_largeobject :
+	callgate<const connection_base>
 {
-  friend class pqxx::blob;
   friend class pqxx::largeobject;
 
   const_connection_largeobject(reference x) : super(x) {}
@@ -33,3 +31,5 @@ class PQXX_PRIVATE const_connection_largeobject : callgate<connection const>
   std::string error_message() const { return home().err_msg(); }
 };
 } // namespace pqxx::internal::gate
+} // namespace pqxx::internal
+} // namespace pqxx

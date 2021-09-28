@@ -1,6 +1,10 @@
 #include <pqxx/internal/callgate.hxx>
 
-namespace pqxx::internal::gate
+namespace pqxx
+{
+namespace internal
+{
+namespace gate
 {
 class PQXX_PRIVATE transaction_sql_cursor : callgate<transaction_base>
 {
@@ -8,3 +12,5 @@ class PQXX_PRIVATE transaction_sql_cursor : callgate<transaction_base>
   transaction_sql_cursor(reference x) : super(x) {}
 };
 } // namespace pqxx::internal::gate
+} // namespace pqxx::internal
+} // namespace pqxx

@@ -1,32 +1,31 @@
-/* Version info for libpqxx.
+/** Version info for libpqxx.
  *
  * DO NOT INCLUDE THIS FILE DIRECTLY; include pqxx/version instead.
  *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_VERSION
 
-#  include "pqxx/compiler-public.hxx"
-#  include "pqxx/internal/compiler-internal-pre.hxx"
+#include "pqxx/compiler-public.hxx"
+#include "pqxx/compiler-internal-pre.hxx"
 
 /// Full libpqxx version string.
-#  define PQXX_VERSION "7.5.2"
+#define PQXX_VERSION "6.4.7"
 /// Library ABI version.
-#  define PQXX_ABI "7.5"
+#define PQXX_ABI "6.4"
 
 /// Major version number.
-#  define PQXX_VERSION_MAJOR 7
+#define PQXX_VERSION_MAJOR 6
 /// Minor version number.
-#  define PQXX_VERSION_MINOR 5
+#define PQXX_VERSION_MINOR 4
 
-#  define PQXX_VERSION_CHECK                                                  \
-    check_pqxx_version_##PQXX_VERSION_MAJOR##_##PQXX_VERSION_MINOR
-
-namespace pqxx::internal
+namespace pqxx
+{
+namespace internal
 {
 /// Library version check stub.
 /** Helps detect version mismatches between libpqxx headers and the libpqxx
@@ -40,17 +39,19 @@ namespace pqxx::internal
  * error when the libpqxx binary is not the same version as the libpqxx headers
  * used to compile the code.
  *
- * This function's definition is in the libpqxx binary, so it's based on the
- * version as found in the binary.  The headers contain a call to the function,
- * whose name contains the libpqxx version as found in the headers.  (The
- * library build process will use its own local headers even if another version
- * of the headers is installed on the system.)
+ * This is a template declaration, but its only actual definition is a
+ * sepcialisation for the current library version.  The definition is in the
+ * libpqxx binary, so it's based on the version as found in the binary.  The
+ * headers contain a call to the function, specialised on the libpqxx version
+ * as found in the headers.  (The library build process will use its own local
+ * headers even if another version of the headers is installed on the system.)
  *
  * If the libpqxx binary was compiled for a different version than the user's
  * code, linking will fail with an error: @c check_library_version will not
  * exist for the given version number.
  */
-PQXX_LIBEXPORT int PQXX_VERSION_CHECK() noexcept;
-} // namespace pqxx::internal
-#  include "pqxx/internal/compiler-internal-post.hxx"
+template<int, int> PQXX_LIBEXPORT int check_library_version() noexcept;
+}
+}
+#include "pqxx/compiler-internal-post.hxx"
 #endif

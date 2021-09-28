@@ -1,13 +1,10 @@
-/* Definitions and settings for compiling libpqxx, and client software.
+/** Compiler deficiency workarounds for libpqxx clients.
  *
- * Include this before any other libpqxx code.  To do that, put it at the top
- * of every public libpqxx header file.
- *
- * Copyright (c) 2000-2021, Jeroen T. Vermeulen.
+ * Copyright (c) 2000-2019, Jeroen T. Vermeulen.
  *
  * See COPYING for copyright license.  If you did not receive a file called
- * COPYING with this source code, please notify the distributor of this
- * mistake, or contact the author.
+ * COPYING with this source code, please notify the distributor of this mistake,
+ * or contact the author.
  */
 #ifndef PQXX_H_COMPILER_PUBLIC
 #define PQXX_H_COMPILER_PUBLIC
@@ -15,16 +12,32 @@
 // Workarounds & definitions that need to be included even in library's headers
 #include "pqxx/config-public-compiler.h"
 
-// Enable ISO-646 keywords: "and" instead of "&&" etc.  Some compilers have
-// them by default, others may need this header.
+// Some compilers, Visual Studio in particular, don't seem to support the
+// standard's ISO-646 keywords out of the box.
 #include <ciso646>
 
 
-#if defined(PQXX_HAVE_GCC_PURE)
-/// Declare function "pure": no side effects, only reads globals and its args.
-#  define PQXX_PURE __attribute__((pure))
+#if defined(__GNUC__) && defined(PQXX_HAVE_GCC_CONST)
+/// Declare function without effects and without reading anything but its args.
+#define PQXX_CONST __attribute__ ((const))
 #else
-#  define PQXX_PURE
+#define PQXX_CONST
+#endif
+
+#if defined(PQXX_HAVE_DEPRECATED)
+/// Mark an item as deprecated.
+#define PQXX_DEPRECATED [[deprecated]]
+#elif defined(__GNUC__) && defined(PQXX_HAVE_GCC_DEPRECATED)
+#define PQXX_DEPRECATED __attribute__ ((deprecated))
+#else
+#define PQXX_DEPRECATED
+#endif
+
+#if defined(__GNUC__) && defined(PQXX_HAVE_GCC_PURE)
+/// Declare function "pure": no side effects, only reads globals and its args.
+#define PQXX_PURE __attribute__ ((pure))
+#else
+#define PQXX_PURE
 #endif
 
 
@@ -35,41 +48,36 @@
  * by the compiler when linking to the dynamic version of the runtime library,
  * according to "gzh"
  */
-#  if defined(PQXX_SHARED) && !defined(PQXX_LIBEXPORT)
-#    define PQXX_LIBEXPORT __declspec(dllimport)
-#  endif // PQXX_SHARED && !PQXX_LIBEXPORT
+#if !defined(PQXX_LIBEXPORT) && defined(PQXX_SHARED)
+#define PQXX_LIBEXPORT __declspec(dllimport)
+#endif	// !PQXX_LIBEXPORT && PQXX_SHARED
 
 
 // Workarounds for Microsoft Visual C++
-#  ifdef _MSC_VER
-
-// Workarounds for deprecated attribute syntax error in Visual Studio 2017.
-#    if _MSC_VER < 1920
-#      define PQXX_DEPRECATED(MESSAGE) __declspec(deprecated(#      MESSAGE))
-#    endif
+#ifdef _MSC_VER
 
 // Suppress vtables on abstract classes.
-#    define PQXX_NOVTABLE __declspec(novtable)
+#define PQXX_NOVTABLE __declspec(novtable)
 
 // Automatically link with the appropriate libpq (static or dynamic, debug or
 // release).  The default is to use the release DLL.  Define PQXX_PQ_STATIC to
 // link to a static version of libpq, and _DEBUG to link to a debug version.
 // The two may be combined.
-#    if defined(PQXX_AUTOLINK)
-#      if defined(PQXX_PQ_STATIC)
-#        ifdef _DEBUG
-#          pragma comment(lib, "libpqd")
-#        else
-#          pragma comment(lib, "libpq")
-#        endif
-#      else
-#        ifdef _DEBUG
-#          pragma comment(lib, "libpqddll")
-#        else
-#          pragma comment(lib, "libpqdll")
-#        endif
-#      endif
-#    endif
+#if defined(PQXX_AUTOLINK)
+#if defined(PQXX_PQ_STATIC)
+#ifdef _DEBUG
+#pragma comment(lib, "libpqd")
+#else
+#pragma comment(lib, "libpq")
+#endif
+#else
+#ifdef _DEBUG
+#pragma comment(lib, "libpqddll")
+#else
+#pragma comment(lib, "libpqdll")
+#endif
+#endif
+#endif
 
 // If we're not compiling libpqxx itself, automatically link with the
 // appropriate libpqxx library.  To link with the libpqxx DLL, define
@@ -79,46 +87,36 @@
 // The preprocessor macro PQXX_INTERNAL is used to detect whether we
 // are compiling the libpqxx library itself.  When you compile the library
 // yourself using your own project file, make sure to include this macro.
-#    if defined(PQXX_AUTOLINK) && !defined(PQXX_INTERNAL)
-#      ifdef PQXX_SHARED
-#        ifdef _DEBUG
-#          pragma comment(lib, "libpqxxD")
-#        else
-#          pragma comment(lib, "libpqxx")
-#        endif
-#      else // !PQXX_SHARED
-#        ifdef _DEBUG
-#          pragma comment(lib, "libpqxx_staticD")
-#        else
-#          pragma comment(lib, "libpqxx_static")
-#        endif
-#      endif
-#    endif
+#if defined(PQXX_AUTOLINK) && !defined(PQXX_INTERNAL)
+  #ifdef PQXX_SHARED
+    #ifdef _DEBUG
+      #pragma comment(lib, "libpqxxD")
+    #else
+      #pragma comment(lib, "libpqxx")
+    #endif
+  #else // !PQXX_SHARED
+    #ifdef _DEBUG
+      #pragma comment(lib, "libpqxx_staticD")
+    #else
+      #pragma comment(lib, "libpqxx_static")
+    #endif
+  #endif
+#endif
 
-#  endif // _MSC_VER
-
-#elif defined(PQXX_HAVE_GCC_VISIBILITY) // !_WIN32
-
-#  define PQXX_LIBEXPORT __attribute__((visibility("default")))
-#  define PQXX_PRIVATE __attribute__((visibility("hidden")))
-
-#endif // PQXX_HAVE_GCC_VISIBILITY
+#endif	// _MSC_VER
+#endif	// _WIN32
 
 
 #ifndef PQXX_LIBEXPORT
-#  define PQXX_LIBEXPORT
+#define PQXX_LIBEXPORT
 #endif
 
 #ifndef PQXX_PRIVATE
-#  define PQXX_PRIVATE
+#define PQXX_PRIVATE
 #endif
 
 #ifndef PQXX_NOVTABLE
-#  define PQXX_NOVTABLE
-#endif
-
-#ifndef PQXX_DEPRECATED
-#  define PQXX_DEPRECATED(MESSAGE) [[deprecated(#  MESSAGE)]]
+#define PQXX_NOVTABLE
 #endif
 
 #endif

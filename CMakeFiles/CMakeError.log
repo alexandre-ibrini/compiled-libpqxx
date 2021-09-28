@@ -1,0 +1,52 @@
+Performing C++ SOURCE FILE Test PQXX_HAVE_OPTIONAL failed with the following output:
+Change Dir: /home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_5b85d/fast"
+/usr/bin/make -f CMakeFiles/cmTC_5b85d.dir/build.make CMakeFiles/cmTC_5b85d.dir/build
+make[1]: Entering directory '/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_5b85d.dir/src.cxx.o
+/usr/bin/c++    -DPQXX_HAVE_OPTIONAL   -std=c++11 -o CMakeFiles/cmTC_5b85d.dir/src.cxx.o -c /home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx
+/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx: In function ‘int main()’:
+/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx:3:21: error: ‘optional’ is not a member of ‘std’
+   int main() { std::optional<int> o; }
+                     ^~~~~~~~
+/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx:3:30: error: expected primary-expression before ‘int’
+   int main() { std::optional<int> o; }
+                              ^~~
+CMakeFiles/cmTC_5b85d.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_5b85d.dir/src.cxx.o' failed
+make[1]: *** [CMakeFiles/cmTC_5b85d.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_5b85d/fast' failed
+make: *** [cmTC_5b85d/fast] Error 2
+
+Source file was:
+
+  #include <optional>
+  int main() { std::optional<int> o; }
+
+Performing C++ SOURCE FILE Test PQXX_HAVE_EXP_OPTIONAL failed with the following output:
+Change Dir: /home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_18f32/fast"
+/usr/bin/make -f CMakeFiles/cmTC_18f32.dir/build.make CMakeFiles/cmTC_18f32.dir/build
+make[1]: Entering directory '/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_18f32.dir/src.cxx.o
+/usr/bin/c++    -DPQXX_HAVE_EXP_OPTIONAL   -std=c++11 -o CMakeFiles/cmTC_18f32.dir/src.cxx.o -c /home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx
+/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx: In function ‘int main()’:
+/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx:3:21: error: ‘std::experimental’ has not been declared
+   int main() { std::experimental::optional<int> o; }
+                     ^~~~~~~~~~~~
+/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp/src.cxx:3:44: error: expected primary-expression before ‘int’
+   int main() { std::experimental::optional<int> o; }
+                                            ^~~
+CMakeFiles/cmTC_18f32.dir/build.make:65: recipe for target 'CMakeFiles/cmTC_18f32.dir/src.cxx.o' failed
+make[1]: *** [CMakeFiles/cmTC_18f32.dir/src.cxx.o] Error 1
+make[1]: Leaving directory '/home/tv2i/Downloads/libpqxx-6.4.7/CMakeFiles/CMakeTmp'
+Makefile:126: recipe for target 'cmTC_18f32/fast' failed
+make: *** [cmTC_18f32/fast] Error 2
+
+Source file was:
+
+  #include <experimental/optional>
+  int main() { std::experimental::optional<int> o; }
+

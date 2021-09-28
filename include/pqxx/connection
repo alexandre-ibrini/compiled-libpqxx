@@ -1,6 +1,6 @@
-/** pqxx::connection class.
+/** pqxx::connection and pqxx::lazyconnection classes.
  *
- * pqxx::connection encapsulates a connection to a database.
+ * Different ways of setting up a backend connection.
  */
 // Actual definitions in .hxx file so editors and such recognize file type.
 #include "pqxx/connection.hxx"
